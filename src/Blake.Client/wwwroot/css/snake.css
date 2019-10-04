@@ -1,0 +1,218 @@
+﻿:root {
+    --mellow-bg-color: white;
+    --mellow-txt-color: black;
+    --mellow-brd-color: lightblue;
+    --mellow-snk-color: red;
+    --mellow-fd-color: green;
+    --blackandwhite-bg-color: black;
+    --blackandwhite-txt-color: white;
+    --blackandwhite-brd-color: white;
+    --blackandwhite-snk-color: black;
+    --blackandwhite-fd-color: gray;
+    --easy-brd-size: 60;
+    --medium-brd-size: 50;
+    --hard-brd-size: 40;
+}
+
+.snake-container {
+    padding-top: 2rem;
+    font-size: 16px;
+    min-height: 100vh;
+    padding-bottom: 2em;
+}
+
+.snake-container.theme-mellow {
+    background-color: var(--mellow-bg-color);
+    color: var(--mellow-txt-color);
+}
+
+.snake-container.theme-blackandwhite{
+    background-color: var(--blackandwhite-bg-color);
+    color: var(--blackandwhite-txt-color);
+}
+
+.snake-controls {
+    max-width: 80%;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.snake-controls p {
+    max-width: 80%;
+    margin: 0 auto;
+}
+
+.snake-controls h2 {
+    margin-top: 1em 0;
+}
+
+.snake-controls h4 {
+    margin: 0 1em 0 0;
+}
+
+.snake-controls button {
+    border: 2px solid tomato;
+    border-radius: 3px;
+    background-color: tomato;
+    color: var(--mellow-bg-color);
+    padding: 0.5em 1em;
+    margin-left: 1em;
+    margin-right: auto;
+}
+
+.snake-controls button:focus{
+    outline:none;
+    text-decoration: underline;
+}
+
+.snake-controls button.selected {
+    background-color: maroon;
+}
+
+.snake-controls button.selected[disabled='true'] {
+    display: block;
+}
+
+.snake-controls button.selected[disabled='true']:hover {
+    display: block;
+    background-color: tomato;
+}
+
+.snake-controls button[disabled='true'] {
+    display: none;
+}
+
+.snake-controls button.start-button {
+    margin: 2em 0;
+}
+
+.snake-controls button:hover {
+    background-color: var(--mellow-bg-color);
+    color: tomato;
+    transition: 0.2s;
+}
+
+.snake-controls ul {
+    display: flex;
+    justify-content: space-around;
+    margin: 2em 0;
+    position: relative;
+    padding: 1em 0;
+}
+
+.snake-controls ul:before {
+    content: "";
+    border: 1px solid gray;
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+}
+
+.snake-controls ul:after {
+    content: "";
+    border: 1px solid gray;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    left: 0;
+}
+
+.snake-controls li {
+    list-style: none outside;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.snake-board {
+    display: grid;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.snake-board.difficulty-easy {
+    grid-template-rows: repeat(var(--easy-brd-size), calc(100% / var(--easy-brd-size)));
+    grid-template-columns: repeat(var(--easy-brd-size), calc(100% / var(--easy-brd-size)));
+    width: calc(var(--easy-brd-size) * 1em);
+}
+
+.snake-board.difficulty-medium {
+    grid-template-rows: repeat(var(--medium-brd-size), calc(100% / var(--medium-brd-size)));
+    grid-template-columns: repeat(var(--medium-brd-size), calc(100% / var(--medium-brd-size)));
+    width: calc(var(--medium-brd-size) * 1em);
+}
+
+.snake-board.difficulty-hard {
+    grid-template-rows: repeat(var(--hard-brd-size), calc(100% / var(--hard-brd-size)));
+    grid-template-columns: repeat(var(--hard-brd-size), calc(100% / var(--hard-brd-size)));
+    width: calc(var(--hard-brd-size) * 1em);
+}
+
+@media (max-width: 1920px) {
+    .snake-container{
+        font-size: 14px;
+    }
+
+    .snake-controls {
+        max-width: 90%
+    }
+
+    .snake-controls button {
+        margin-left: 0.7em;
+    }
+
+    .snake-controls h4 {
+        margin: 0 0.5em 0 0;
+    }
+}
+
+@media (max-width: 1366px) {
+    .snake-container {
+        font-size: 12px;
+    }
+
+    .snake-controls {
+        max-width: 95%
+    }
+
+    .snake-controls button {
+        margin-left: 0.4em;
+    }
+
+    .snake-controls h4 {
+        margin: 0 0.2em 0 0;
+    }
+}
+
+.segment {
+    padding: 0;
+    margin: 0;
+    width: 1em;
+    height: 1em;
+}
+
+.segment.theme-mellow {
+    background-color: var(--mellow-brd-color);
+}
+
+.segment.theme-blackandwhite {
+    background-color: var(--blackandwhite-brd-color);
+}
+
+.segment.snake-segment.theme-mellow {
+    background-color: var(--mellow-snk-color);
+}
+
+.segment.food-segment.theme-mellow {
+    background-color: var(--mellow-fd-color);
+}
+
+.segment.snake-segment.theme-blackandwhite {
+    background-color: var(--blackandwhite-snk-color);
+}
+
+.segment.food-segment.theme-blackandwhite {
+    background-color: var(--blackandwhite-fd-color);
+}

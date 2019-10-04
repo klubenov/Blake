@@ -1,0 +1,196 @@
+﻿@page "/"
+
+@using Blake.Shared.Models.ViewModels
+@using Blake.Shared.Models.DbModels
+@using Blake.Shared.Entities.Snake
+@using Blake.Services.Contracts
+@using System.Text.RegularExpressions
+@inject IJSRuntime jsRuntime
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject ISnakeService SnakeService
+
+
+<audio id="eatSound" preload="auto">
+    <source src="/eatalt.mp3" type="audio/mpeg" />
+</audio>
+<audio id="startSound" preload="auto">
+    <source src="/start.mp3" type="audio/mpeg" />
+</audio>
+<audio id="endSound" preload="auto">
+    <source src="/end.mp3" type="audio/mpeg" />
+</audio>
+<div class="snake-container @Theme">
+    <div class="snake-controls">
+        <p>It is doubltable that any of you don't already know the rules of the game but just for the sake of it here they are: Your snake starts crawling slowly through the board with the main purpose of eating the food. As the food is eaten the snake grows and a new food chunk appears on the board. As the snake grows larger it also grows faster. If the snake hits a part of its body or a board wall it dies and the game ends. The goal is to survive for as long as you can.</p>
+        <button class="start-button" @onclick="Run">@(string.IsNullOrEmpty(Difficulty) ? "You should select difficulty level before starting" : "Start")</button>
+        <p>Controls - Movement: WASD | Pause/Resume: Space</p>
+        <h2>Settings:</h2>
+        <ul>
+            <li>
+                <h4>Difficulty:</h4>
+                <button class="difficulty-button" id="difficulty-easy" @onclick="@(e => SetDifficulty("difficulty-easy"))">Easy</button>
+                <button class="difficulty-button" id="difficulty-medium" @onclick="@(e => SetDifficulty("difficulty-medium"))">Medium</button>
+                <button class="difficulty-button" id="difficulty-hard" @onclick="@(e => SetDifficulty("difficulty-hard"))">Hard</button>
+            </li>
+            <li>
+                <h4>Audio:</h4>
+                <button class="audio-button selected" @onclick="@(e => ToggleSounds())">Use sounds</button>
+            </li>
+            <li>
+                <h4>Theme:</h4>
+                <button class="theme-button" id="theme-blackandwhite" @onclick="@(e => SetTheme("theme-blackandwhite"))">Black and white</button>
+                <button class="theme-button selected" id="theme-mellow" @onclick="@(e => SetTheme("theme-mellow"))">Mellow</button>
+            </li>
+        </ul>
+    </div>
+    <div class="snake-board">
+        @if (Engine != null)
+        {
+            @for (int j = 0; j < Engine.SnakeBoard.SnakeBoardHeight; j++)
+            {
+                for (int i = 0; i < Engine.SnakeBoard.SnakeBoardWidth; i++)
+                {
+                    <div class="segment @Theme" id="@($"{j}|{i}")"></div>
+                }
+            }
+        }
+    </div>
+</div>
+
+@code {
+
+    private string Difficulty { get; set; }
+
+    private bool SoundsEnabled { get; set; }
+
+    private string Theme { get; set; }
+
+    private int FinalPoints { get; set; }
+
+    private SnakeEngine Engine { get; set; }
+
+
+    protected override void OnInitialized()
+    {
+        this.SoundsEnabled = true;
+        this.Theme = "theme-mellow";
+
+        ((IJSInProcessRuntime)jsRuntime).Invoke<object>("SetJsReference", DotNetObjectReference.Create(this));
+    }
+
+    private async void Run()
+    {
+        if (!string.IsNullOrEmpty(Difficulty))
+        {
+            var snakeDifficulty = await Http.GetJsonAsync<SnakeDifficulty>($"api/difficulty/{this.Difficulty}");
+
+            Engine = this.SnakeService.GetEngine(snakeDifficulty);
+            this.Engine.ElapsedTime += this.OnElapsedTime;
+            ((IJSInProcessRuntime)jsRuntime).Invoke<object>("DisableButtonsAutoFocusOnClick");
+            ((IJSInProcessRuntime)jsRuntime).Invoke<object>("DisableButtons", "difficulty-button");
+            this.StateHasChanged();
+            this.Engine.Run();
+            ((IJSInProcessRuntime)jsRuntime).Invoke<object>("PlaySound", "startSound");
+        }
+    }
+
+    private void SetDifficulty(string difficultyLevel)
+    {
+        if (!string.IsNullOrEmpty(this.Difficulty))
+        {
+            ((IJSInProcessRuntime)jsRuntime).Invoke<object>("ResetButtons", "difficulty-button");
+        }
+        if (this.Engine == null)
+        {
+            this.Difficulty = difficultyLevel;
+            ((IJSInProcessRuntime)jsRuntime).Invoke<object>("SetDifficulty", difficultyLevel);
+        }
+    }
+
+    private void SetTheme(string theme)
+    {
+        this.Theme = theme;
+        ((IJSInProcessRuntime)jsRuntime).Invoke<object>("ResetButtons", "theme-button");
+        ((IJSInProcessRuntime)jsRuntime).Invoke<object>("SetTheme", theme);
+    }
+
+    private void ToggleSounds()
+    {
+        ((IJSInProcessRuntime)jsRuntime).Invoke<object>("ToggleButtons", "audio-button");
+        this.SoundsEnabled = !this.SoundsEnabled;
+    }
+
+    public void OnElapsedTime(object source, EndEventArgs e)
+    {
+        if (e.IsEnd)
+        {
+            this.Engine.Timer.Stop();
+            ((IJSInProcessRuntime)jsRuntime).Invoke<object>("PlaySound", "endSound");
+            var gameOverString = $"NANIIII!?!? - {e.Points} points. Please enter your name if you want to eventually appear in the scores table. Only latin characters and numbers are allowed, with no whitespaces, e.g. 'myname', not 'my name'";
+            this.FinalPoints = e.Points;
+            this.GameOver(gameOverString);
+        }
+        if (e.IsFed && this.SoundsEnabled == true)
+        {
+            ((IJSInProcessRuntime)jsRuntime).Invoke<object>("PlaySound", "eatSound");
+        }
+        this.UpdateBoard(e.UpdateModel);
+    }
+
+    [JSInvokable]
+    public void HandleControl(string control)
+    {
+        var command = control.ToLower();
+        if (command == "space")
+        {
+            this.Engine.Timer.Enabled = !this.Engine.Timer.Enabled;
+        }
+        else if (command == "keyd" || command == "keyw" || command == "keya" || command == "keys")
+        {
+            this.Engine.UpdateDirection(command[3]);
+        }
+    }
+
+    [JSInvokable]
+    public async Task SaveScore(string player)
+    {
+        var isPlayerValid = this.ValidatePlayerName(player.Trim());
+
+        if (!isPlayerValid)
+        {
+            this.Engine = null;
+            this.Difficulty = null;
+            ((IJSInProcessRuntime)jsRuntime).Invoke<object>("ResetButtons", "difficulty-button");
+            this.StateHasChanged();
+        }
+        else
+        {
+            var score = new Score
+            {
+                PlayerName = player.Trim(),
+                Points = this.FinalPoints
+            };
+
+            await Http.PostJsonAsync("api/scores", score);
+            NavigationManager.NavigateTo("/scores");
+        }
+
+    }
+
+    private void UpdateBoard(UpdateModel model)
+    {
+        ((IJSInProcessRuntime)jsRuntime).Invoke<UpdateModel>("UpdateSnake", model);
+    }
+
+    private void GameOver(string message)
+    {
+        ((IJSInProcessRuntime)jsRuntime).Invoke<object>("GameOver", message);
+    }
+
+    private bool ValidatePlayerName(string player)
+    {
+        var regex = new Regex("^[A-za-z0-9]+$");
+        return regex.IsMatch(player);
+    }
+}

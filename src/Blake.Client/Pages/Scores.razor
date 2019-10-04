@@ -1,0 +1,33 @@
+﻿@page "/scores"
+@using Blake.Shared.Models.ViewModels
+@inject HttpClient Http
+
+<div class="scores-container">
+    <h1>Hello, snake maniacs!</h1>
+
+    <h2>High scores:</h2>
+    @if (model == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <ul>
+            @for (int i = 0; i < model.Scores.Count; i++)
+            {
+                <li>@(i + 1). @model.Scores[i].PlayerName - @model.Scores[i].Points points.</li>
+            }
+        </ul>
+    }
+</div>
+
+
+
+@code{
+    HighScoresViewModel model;
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await Http.GetJsonAsync<HighScoresViewModel>("api/scores");
+    }
+}
