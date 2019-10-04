@@ -23,7 +23,7 @@
 <div class="snake-container @Theme">
     <div class="snake-controls">
         <p>It is doubltable that any of you don't already know the rules of the game but just for the sake of it here they are: Your snake starts crawling slowly through the board with the main purpose of eating the food. As the food is eaten the snake grows and a new food chunk appears on the board. As the snake grows larger it also grows faster. If the snake hits a part of its body or a board wall it dies and the game ends. The goal is to survive for as long as you can.</p>
-        <button class="start-button" @onclick="Run">@(string.IsNullOrEmpty(Difficulty) ? "You should select difficulty level before starting" : "Start")</button>
+        <button class="start-button" @onclick="Run">@StatusLevels[Status]</button>
         <p>Controls - Movement: WASD | Pause/Resume: Space</p>
         <h2>Settings:</h2>
         <ul>
@@ -68,6 +68,15 @@
 
     private int FinalPoints { get; set; }
 
+    private Dictionary<int, string> StatusLevels { get; } = new Dictionary<int, string>()
+{
+            { 1, "You should select difficulty level before starting" },
+            { 2, "Start" },
+            { 3, "Game is running..." }
+    };
+
+    private int Status { get; set; } = 1;
+
     private SnakeEngine Engine { get; set; }
 
 
@@ -81,7 +90,7 @@
 
     private async void Run()
     {
-        if (!string.IsNullOrEmpty(Difficulty))
+        if (!string.IsNullOrEmpty(Difficulty) && this.Engine == null)
         {
             var snakeDifficulty = await Http.GetJsonAsync<SnakeDifficulty>($"api/difficulty/{this.Difficulty}");
 
@@ -89,14 +98,19 @@
             this.Engine.ElapsedTime += this.OnElapsedTime;
             ((IJSInProcessRuntime)jsRuntime).Invoke<object>("DisableButtonsAutoFocusOnClick");
             ((IJSInProcessRuntime)jsRuntime).Invoke<object>("DisableButtons", "difficulty-button");
+            this.Status = 3;
             this.StateHasChanged();
             this.Engine.Run();
-            ((IJSInProcessRuntime)jsRuntime).Invoke<object>("PlaySound", "startSound");
+            if (this.SoundsEnabled)
+            {
+                ((IJSInProcessRuntime)jsRuntime).Invoke<object>("PlaySound", "startSound");
+            }
         }
     }
 
     private void SetDifficulty(string difficultyLevel)
     {
+        this.Status = 2;
         if (!string.IsNullOrEmpty(this.Difficulty))
         {
             ((IJSInProcessRuntime)jsRuntime).Invoke<object>("ResetButtons", "difficulty-button");
@@ -126,7 +140,10 @@
         if (e.IsEnd)
         {
             this.Engine.Timer.Stop();
-            ((IJSInProcessRuntime)jsRuntime).Invoke<object>("PlaySound", "endSound");
+            if (this.SoundsEnabled)
+            {
+                ((IJSInProcessRuntime)jsRuntime).Invoke<object>("PlaySound", "endSound");
+            }
             var gameOverString = $"NANIIII!?!? - {e.Points} points. Please enter your name if you want to eventually appear in the scores table. Only latin characters and numbers are allowed, with no whitespaces, e.g. 'myname', not 'my name'";
             this.FinalPoints = e.Points;
             this.GameOver(gameOverString);
@@ -157,14 +174,7 @@
     {
         var isPlayerValid = this.ValidatePlayerName(player.Trim());
 
-        if (!isPlayerValid)
-        {
-            this.Engine = null;
-            this.Difficulty = null;
-            ((IJSInProcessRuntime)jsRuntime).Invoke<object>("ResetButtons", "difficulty-button");
-            this.StateHasChanged();
-        }
-        else
+        if (isPlayerValid)
         {
             var score = new Score
             {
@@ -175,7 +185,6 @@
             await Http.PostJsonAsync("api/scores", score);
             NavigationManager.NavigateTo("/scores");
         }
-
     }
 
     private void UpdateBoard(UpdateModel model)
@@ -185,6 +194,11 @@
 
     private void GameOver(string message)
     {
+        this.Status = 1;
+        this.Engine = null;
+        this.Difficulty = null;
+        ((IJSInProcessRuntime)jsRuntime).Invoke<object>("ResetButtons", "difficulty-button");
+        this.StateHasChanged();
         ((IJSInProcessRuntime)jsRuntime).Invoke<object>("GameOver", message);
     }
 
